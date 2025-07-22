@@ -11,7 +11,7 @@ from streamlit_folium import st_folium
 from folium.features import DivIcon
 
 
-APP_TITLE = "SFDC MAPS"
+APP_TITLE = "SFDC Maps"
 SR_list = ['Mokhtaria Touhami',
         'Antoine Lejard',
         'Thibaut Sternitzky',
