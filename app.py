@@ -27,12 +27,10 @@ SR_list = ['Mokhtaria Touhami',
         'STEPHANIE LEPERE',
         'CHRISTELLE VAUCHELET',
         'Emmanuelle BARD',
-        'Marc Emsalem',
         'BLANDINE DINGREVILLE',
         'Marie MORIN',
         'Olivier BERGERON',
         'Florian Darcel',
-        'Stephanie GUILLERME',
         'CATHERINE PERROT',
         'Sophie LE PEUTREC',
         'Agnès Devignac',
@@ -51,6 +49,10 @@ SR_list = ['Mokhtaria Touhami',
         'Stephane Combret',
         'CHARBONNIER MAGALI',
         'LINDA MEGHARBI',
+        'Christophe Bellier',
+        'Alice Viard',
+        'Amandine Guillot',
+        'Meriam Abidi'
         ]
 
 @st.cache_data
@@ -416,3 +418,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
