@@ -156,12 +156,14 @@ def get_data(Rep_name):
     report_accounts = response_accounts.content.decode('utf-8')
     All_Accounts = pd.read_csv(StringIO(report_accounts))
     All_Accounts = All_Accounts[All_Accounts['Account ID'].map(lambda x: str(x)[0]) == '0']
+    All_Accounts = All_Accounts[All_Accounts['Account Owner'] == Rep_name]
 
     sf_report_url_contacts = sf_org + report_id_contacts + export_params
     response_contacts = requests.get(sf_report_url_contacts, headers=sf.headers, cookies={'sid': sf.session_id})
     report_contacts = response_contacts.content.decode('utf-8')
     All_Contacts = pd.read_csv(StringIO(report_contacts))
     All_Contacts = All_Contacts[All_Contacts['Contact ID'].map(lambda x: str(x)[0]) == '0']
+    All_Contacts = All_Contacts[All_Contacts['Contact Owner'] == Rep_name]
     All_Contacts['Name'] = All_Contacts['First Name'] + " " + All_Contacts['Last Name']
     All_Contacts['Lat'] = All_Contacts['Lat'].fillna(0)
     All_Contacts['Lon'] = All_Contacts['Lon'].fillna(0)
@@ -170,17 +172,17 @@ def get_data(Rep_name):
     All_Contacts['Lat'] = All_Contacts['Lat'] + All_Contacts['Len fName'].map(lambda x: int(math.log10(x)*10)*0.0001)
     All_Contacts['Lon'] = All_Contacts['Lon'] + All_Contacts['Len lName'].map(lambda x: int(math.log10(x)*10)*0.0001)
     All_Contacts = All_Contacts[['Contact ID', 'Contact Owner', 'Name',
-        'Contact  Type', 'ABCD Grid BGM (Contact) - current', 'Status',
-        'Call Status (Contact)', 'Brick Code', 'Primary State/Province',
-        'Primary City', 'Primary Street', 'Account Category',
-        'Target Call Frequency / Cycle (Contact)', 'Lat', 'Lon', 'Last Visit',
-        'Last Call Date (Contact)', 'Last Activity']]
+            'Contact  Type', 'ABCD Grid BGM (Contact) - current', 'Status',
+            'Call Status (Contact)', 'Brick Code', 'Primary State/Province',
+            'Primary City', 'Primary Street', 'Account Category',
+            'Target Call Frequency / Cycle (Contact)', 'Lat', 'Lon']]
 
     sf_report_url_visits = sf_org + report_id_visits + export_params
     response_visits = requests.get(sf_report_url_visits, headers=sf.headers, cookies={'sid': sf.session_id})
     report_visits = response_visits.content.decode('utf-8')
     visits = pd.read_csv(StringIO(report_visits))
     visits = visits[visits['Account ID'].map(lambda x: str(x)[0]) == '0']
+    visits = visits[visits['Assigned'] == Rep_name]
 
     sf_report_url_prev_visits = sf_org + report_id_prev_visits + export_params
     response_prev_visits = requests.get(sf_report_url_prev_visits, headers=sf.headers, cookies={'sid': sf.session_id})
@@ -193,6 +195,7 @@ def get_data(Rep_name):
     report_visits_contact = response_visits_contact.content.decode('utf-8')
     visits_contact = pd.read_csv(StringIO(report_visits_contact))
     visits_contact = visits_contact[visits_contact['Contact ID'].map(lambda x: str(x)[0]) == '0']
+    visits_contact = visits_contact[visits_contact['Assigned'] == Rep_name]
 
     sf_report_url_prev_visits_contact = sf_org + report_id_prev_visits_contact + export_params
     response_prev_visits_contact = requests.get(sf_report_url_prev_visits_contact, headers=sf.headers, cookies={'sid': sf.session_id})
@@ -201,44 +204,48 @@ def get_data(Rep_name):
     prev_visits_contact = prev_visits_contact[prev_visits_contact['Contact ID'].map(lambda x: str(x)[0]) == '0']    
 
     All_Accounts = All_Accounts.rename(columns = {
-        'Account ID': 'ID',
-        'Account Owner': 'Owner',
-        'Account Name': 'Name',
-        'Account Type': 'Type',
-        'Account Segment': 'Segment',
-        'Account Status': 'Status',
-        'Call Status (Account)': 'Call Status',
-        'Target Call Frequency / Cycle (Account)': 'Target Call Frequency',
-        'Last Call Date (Account)': 'Last Call Date'    
-    })
+            'Account ID': 'ID',
+            'Account Owner': 'Owner',
+            'Account Name': 'Name',
+            'Account Type': 'Type',
+            'Account Segment': 'Segment',
+            'Account Status': 'Status',
+            'Call Status (Account)': 'Call Status',
+            'Target Call Frequency / Cycle (Account)': 'Target Call Frequency'})
 
     All_Contacts = All_Contacts.rename(columns = {
-        'Contact ID': 'ID',
-        'Contact Owner': 'Owner',
-        'Contact  Type': 'Type',
-        'ABCD Grid BGM (Contact) - current': 'Segment',
-        'Call Status (Contact)': 'Call Status',
-        'Target Call Frequency / Cycle (Contact)': 'Target Call Frequency',
-        'Last Call Date (Contact)': 'Last Call Date'    
-    })
+            'Contact ID': 'ID',
+            'Contact Owner': 'Owner',
+            'Contact  Type': 'Type',
+            'ABCD Grid BGM (Contact) - current': 'Segment',
+            'Call Status (Contact)': 'Call Status',
+            'Target Call Frequency / Cycle (Contact)': 'Target Call Frequency'})
 
-    visits_pivot = visits.groupby('Account ID').agg({'Date': 'nunique'}).reset_index()
-    visits_pivot = visits_pivot.rename(columns={'Date': 'Visit_count', 'Account ID': 'ID'})
-    All_Accounts = All_Accounts.merge(visits_pivot[['ID','Visit_count']], on = 'ID', how = 'left')
+    visits_count = visits.groupby('Account ID').agg({'Date': 'nunique'}).reset_index()
+    visits_count = visits_count.rename(columns={'Date': 'Visit_count', 'Account ID': 'ID'})
+    All_Accounts = All_Accounts.merge(visits_count[['ID','Visit_count']], on = 'ID', how = 'left')
     All_Accounts['Visit_count'] = All_Accounts['Visit_count'].fillna(0)
     All_Accounts['Account Category'] = All_Accounts['Account Category'].fillna("-")
     All_Accounts['Visit_rate'] = All_Accounts['Visit_count'].map(lambda x: str(int(x))) + "/" + All_Accounts['Target Call Frequency'].map(lambda x: str(int(x)))
     All_Accounts['Visit_percentage'] = All_Accounts['Visit_count'] / All_Accounts['Target Call Frequency']
     All_Accounts['Visited'] = All_Accounts['Visit_count'].map(lambda x: "Y" if x > 0 else "N")
 
-    visits_pivot_contact = visits_contact.groupby('Contact ID').agg({'Date': 'nunique'}).reset_index()
-    visits_pivot_contact = visits_pivot_contact.rename(columns={'Date': 'Visit_count', 'Contact ID': 'ID'})
-    All_Contacts = All_Contacts.merge(visits_pivot_contact[['ID','Visit_count']], on = 'ID', how = 'left')
+    visits_count_contact = visits_contact.groupby('Contact ID').agg({'Date': 'nunique'}).reset_index()
+    visits_count_contact = visits_count_contact.rename(columns={'Date': 'Visit_count', 'Contact ID': 'ID'})
+    All_Contacts = All_Contacts.merge(visits_count_contact[['ID','Visit_count']], on = 'ID', how = 'left')
     All_Contacts['Visit_count'] = All_Contacts['Visit_count'].fillna(0)
     All_Contacts['Account Category'] = All_Contacts['Account Category'].fillna("-")
     All_Contacts['Visit_rate'] = All_Contacts['Visit_count'].map(lambda x: str(int(x))) + "/" + All_Contacts['Target Call Frequency'].map(lambda x: str(int(x)))
     All_Contacts['Visit_percentage'] = All_Contacts['Visit_count'] / All_Contacts['Target Call Frequency']
     All_Contacts['Visited'] = All_Contacts['Visit_count'].map(lambda x: "Y" if x > 0 else "N")
+
+    visits_last = visits.groupby('Account ID').agg({'Date': 'max'}).reset_index()
+    visits_last = visits_last.rename(columns={'Date': 'Last Visit Date', 'Account ID': 'ID'})
+    All_Accounts = All_Accounts.merge(visits_last[['ID','Last Visit Date']], on = 'ID', how = 'left')
+
+    visits_last_contact = visits_contact.groupby('Contact ID').agg({'Date': 'max'}).reset_index()
+    visits_last_contact = visits_last_contact.rename(columns={'Date': 'Last Visit Date', 'Contact ID': 'ID'})
+    All_Contacts = All_Contacts.merge(visits_last_contact[['ID','Last Visit Date']], on = 'ID', how = 'left')
 
     prev_visits_pivot = prev_visits.groupby('Account ID').agg({'Date': 'count'}).reset_index()
     prev_visits_pivot = prev_visits_pivot.rename(columns={'Date': 'Visit_count_prev', 'Account ID': 'ID'})
@@ -255,34 +262,22 @@ def get_data(Rep_name):
     All_Accounts['Client Type'] = "Account"
     All_Contacts['Client Type'] = "Contact"
     All_Accounts = All_Accounts[['ID', 'Owner', 'Client Type', 'Name', 'Type', 'Segment', 'Status', 'Call Status',
-        'Brick Code', 'Primary State/Province', 'Primary City',
-        'Primary Street', 'Account Category', 'Target Call Frequency', 'Lat',
-        'Lon', 'Last Visit', 'Last Call Date', 'Last Activity', 'Visit_count',
-        'Visit_rate', 'Visit_percentage', 'Visited', 'Visit_count_prev', 'NEW']]
+            'Brick Code', 'Primary State/Province', 'Primary City',
+            'Primary Street', 'Account Category', 'Target Call Frequency', 'Lat',
+            'Lon', 'Last Visit Date', 'Visit_count',
+            'Visit_rate', 'Visit_percentage', 'Visited', 'Visit_count_prev', 'NEW']]
     All_Contacts = All_Contacts[['ID', 'Owner', 'Client Type', 'Name', 'Type', 'Segment', 'Status', 'Call Status',
-        'Brick Code', 'Primary State/Province', 'Primary City',
-        'Primary Street', 'Account Category', 'Target Call Frequency', 'Lat',
-        'Lon', 'Last Visit', 'Last Call Date', 'Last Activity', 'Visit_count',
-        'Visit_rate', 'Visit_percentage', 'Visited', 'Visit_count_prev', 'NEW']]
+            'Brick Code', 'Primary State/Province', 'Primary City',
+            'Primary Street', 'Account Category', 'Target Call Frequency', 'Lat',
+            'Lon', 'Last Visit Date', 'Visit_count',
+            'Visit_rate', 'Visit_percentage', 'Visited', 'Visit_count_prev', 'NEW']]
 
     df_combine = pd.concat([All_Accounts, All_Contacts])
     data = df_combine[df_combine['Owner'] == Rep_name].reset_index()
     data['Lat'] = data['Lat'].fillna(0)
     data['Lon'] = data['Lon'].fillna(0)
-    data['Last Visit'] = data['Last Visit'].map(lambda x: str(x).replace("/", "-"))
-    data['Last Visit'] = data['Last Visit'].map(lambda x: datetime.strptime(x, '%d-%m-%Y').date() if x!='nan' else 0)
-    data['Last Call Date'] = data['Last Call Date'].map(lambda x: str(x).replace("/", "-"))
-    data['Last Call Date'] = data['Last Call Date'].map(lambda x: datetime.strptime(x, '%d-%m-%Y').date() if x!='nan' else 0)
-    data['Last Activity'] = data['Last Activity'].map(lambda x: str(x).replace("/", "-"))
-    data['Last Activity'] = data['Last Activity'].map(lambda x: datetime.strptime(x, '%d-%m-%Y').date() if x!='nan' else 0)
-    data['Last Visit Date'] = ""
-    for i in range(data['ID'].shape[0]):
-        if (data['Last Visit'][i] == 0) & (data['Last Call Date'][i] != 0):
-            data.loc[i, 'Last Visit Date'] = data.loc[i, 'Last Call Date']
-        elif (data['Last Visit'][i] == 0) & (data['Last Call Date'][i] == 0):
-            data.loc[i, 'Last Visit Date'] = data.loc[i, 'Last Activity']
-        else:
-            data.loc[i, 'Last Visit Date'] = data.loc[i, 'Last Visit']
+    data['Last Visit Date'] = data['Last Visit Date'].map(lambda x: str(x).replace("/", "-"))
+    data['Last Visit Date'] = data['Last Visit Date'].map(lambda x: datetime.strptime(x, '%d-%m-%Y').date() if x!='nan' else '')
 
     return data
 
@@ -399,6 +394,7 @@ def main():
                      &(df['NEW'].isin(new_filter))
                      &(df['Target Call Frequency'] >= target[0])
                      &(df['Target Call Frequency'] <= target[1])]
+    df_filtered['Visit_percentage'] = df_filtered['Visit_percentage'] * 100
 
     #Display map
     fol_map = display_map(df_filtered)
@@ -413,9 +409,18 @@ def main():
                                 file_name= 'Accounts.xlsx',
                                 mime='application/vnd.ms-excel')
 
-
+    #Display table
+    data_frame = df_filtered[['ID', 'Owner', 'Client Type', 'Name', 'Type', 'Segment', 'Account Category',
+        'Target Call Frequency', 'Visit_count', 'Visit_rate', 'Visit_percentage', 'Last Visit Date', 'Visited', 'NEW',
+        'Brick Code', 'Primary State/Province', 'Primary City', 'Primary Street']]
+    st.dataframe(data_frame,
+                column_config={
+                'Visit_percentage': st.column_config.NumberColumn(
+                     "Visit_percentage",
+                     help="The percentage value",
+                     format="%.0f%%")},
+                hide_index=True)
 
 
 if __name__ == "__main__":
     main()
-
