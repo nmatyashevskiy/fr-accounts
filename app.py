@@ -307,6 +307,7 @@ def main():
     
     with colb:
         st.write('')
+        st.write('')
         if st.button("🔄 Refresh data", use_container_width=True):
             get_data.clear()
             df = get_data(st.session_state.Rep_name)
@@ -425,4 +426,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
